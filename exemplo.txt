@@ -1,0 +1,3 @@
+O arquivo e exibido assim,
+#15Ou talvez um pouco mais lento
+#01E segue ate o fim do arquivo

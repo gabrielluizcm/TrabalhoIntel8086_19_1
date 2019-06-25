@@ -5,16 +5,18 @@
     LF  equ 10
 
 .data
-    Periodicidade   db  1
+    Periodicidade   dw  1
+    TempPeriod      dw  0
     TempoInicial    dw  0
-    NovaLinhaStr   db  CR, LF, 0
-    NomeArquivo db  100 dup (?)
+    NovaLinhaStr    db  CR, LF, 0
+    NomeArquivo     db  21 DUP (0)
+    HandleArquivo   dw  0
     LeituraArquivo  db  0
     Identificacao   db  'Gabriel Luiz Carpes Maria - 00281952', CR, LF, 0
     PerguntaNome    db  'Digite o nome do arquivo (max 20): ', 0
     FimNormal   db  'O programa foi encerrado corretamente por decisao do usuario.', CR, LF, 0
     ErroAoAbrir db  'Falha ao abrir - arquivo nao encontrado!', CR, LF, 0
-    ErroDeTag   db  'Erro no conteúdo do arquivo', CR, LF, 0
+    ErroDeTag   db  'Erro no conteudo do arquivo', CR, LF, 0
 .code
 .startup
     call limpaTela
@@ -25,37 +27,118 @@
     call printaPergunta
     call ReadString
     call stringFoiVazia
+    jmpReinicio:    ;jmp se apertar 'r'
     call abreArquivo
     jnc conseguiuAbrir
     call erroDeAbertura
     jmp loopArquivo
 
     conseguiuAbrir:
+    mov HandleArquivo, ax
     call limpaTela
     mov Periodicidade, 1
+
+    loopLeitura:
     call getTime
     mov TempoInicial, dx
     call leProxChar
-    cmp ax, 0   ;verifica se é o fim do arquivo
+    cmp ax, 0   ;verifica se e o fim do arquivo
     jnz naoEEOF
     call fechaArquivo
     call limpaTela
     jmp loopArquivo
 
-    naoEEOF:    ;se não for continua
+    naoEEOF:    ;se nao for continua
     cmp LeituraArquivo, 35
     jnz loopDeEspera    ;se não for '#' entra em espera
-    cmp al, 0
-    jz mudaPeriodicidade
+    ;mudanca de periodicidade
+    mov TempPeriod, 0
+    call leProxChar
+    cmp LeituraArquivo, 48  ;é número?
+    jl erroNaTag
+    cmp LeituraArquivo, 57
+    jg erroNaTag
+    mov ax, 0
+    mov al, LeituraArquivo
+    sub ax, 48  ;tira o "offset" da tabela ascii
+    mov cx, 10  ;coloca como dezena
+    mul ax
+    mov TempPeriod, ax
+    call leProxChar
+    cmp LeituraArquivo, 48  ;verifica e soma a unidade
+    jl erroNaTag
+    cmp LeituraArquivo, 57
+    jg erroNaTag
+    mov ax, 0
+    mov ax, TempPeriod
+    add al, LeituraArquivo
+    sub ax, 48
+    mov Periodicidade, ax
+    mov TempPeriod, 0
+    jmp loopLeitura
+
+    erroNaTag:
+    call limpaTela
     lea bx, ErroDeTag
     call printf_s
     call ReadString
-    call limpaTela
     jmp loopArquivo
 
     loopDeEspera:
+    call getTime
+    mov ax, dx
+    sub ax, TempoInicial
+    js  virouTempo
+    cmp ax, Periodicidade
+    jg podePrintar
+    jmp loopDeEspera
 
-    mudaPeriodicidade:
+    podePrintar:
+    call putChar
+    call kbHit
+    cmp al, 0
+    je loopLeitura
+
+    ;caso haja tecla:
+    call getChar
+
+    cmp al, 114 ;confere o 'r'
+    je reinicia
+    cmp al, 82
+    je reinicia
+
+    cmp al, 110 ;confere o 'n'
+    je novoArquivo
+    cmp al, 78
+    je novoArquivo
+
+    cmp al, 27  ;confere o ESC
+    je escape
+
+    jmp loopLeitura
+
+    reinicia:
+    call fechaArquivo
+    call limpaTela
+    jmp jmpReinicio
+
+    novoArquivo:
+    call fechaArquivo
+    call limpaTela
+    jmp loopArquivo
+
+    escape:
+    call fechaArquivo
+    call limpaTela
+    lea bx, FimNormal
+    call printf_s
+    .exit 0
+
+    virouTempo: ;caso o tempo atual seja menor que o inicial
+    mov TempoInicial, 0
+    call getTime
+    mov dx, Periodicidade
+    jg podePrintar
 .exit
 
 printaPergunta proc near
@@ -66,11 +149,12 @@ printaPergunta proc near
     ret
 printaPergunta endp
 
-;verifica se o nome do arquivo é vazio -> somente ENTER foi teclado
+;verifica se o nome do arquivo e vazio -> somente ENTER foi teclado
 stringFoiVazia proc near
     mov al, NomeArquivo[0]
     cmp al, 0
     jnz fazNada
+    call fechaArquivo
     call novaLinha
     lea bx, FimNormal
     call printf_s
@@ -113,23 +197,41 @@ erroDeAbertura proc near
     ret
 erroDeAbertura endp
 
-leProxChar proc near
-    mov ah, 3fh
-    lea bx, NomeArquivo
-    mov cx, 1
-    lea dx, LeituraArquivo
-    int 21h
-    ret
-leProxChar endp
-
 getTime proc near
     mov ah, 0
     int 1ah
     ret
 getTime endp
 
+leProxChar proc near
+    mov ah, 3fh
+    mov bx, HandleArquivo
+    mov cx, 1
+    lea dx, LeituraArquivo
+    int 21h
+    ret
+leProxChar endp
 
-;######### TRECHO DE CÓDIGO NÃO-AUTORAL, CEDIDO PELO PROFESSOR #################################
+putChar proc near
+    mov dl, LeituraArquivo
+    mov ah, 2
+    int 21h
+    ret
+putChar endp
+
+getChar proc near
+    mov ah, 8h
+    int 21H
+    ret
+getChar endp
+
+kbHit proc near
+    mov ah, 0bh
+    int 21H
+    ret
+kbHit endp
+
+;######### TRECHO DE CODIGO NAO-AUTORAL, CEDIDO PELO PROFESSOR #################################
     ;--------------------------------------------------------------------
     ;Funcao: Escrever um string na tela
     ;
@@ -282,52 +384,6 @@ getTime endp
 
     ReadString	endp
 
-    ;--------------------------------------------------------------------
-    ;Funcao:Converte um ASCII-DECIMAL para HEXA
-    ;Entra: (S) -> DS:BX -> Ponteiro para o string de origem
-    ;Sai:	(A) -> AX -> Valor "Hex" resultante
-    ;Algoritmo:
-    ;	A = 0;
-    ;	while (*S!='\0') {
-    ;		A = 10 * A + (*S - '0')
-    ;		++S;
-    ;	}
-    ;	return
-    ;--------------------------------------------------------------------
-    atoi	proc near
-
-            ; A = 0;
-            mov		ax,0
-            
-    atoi_2:
-            ; while (*S!='\0') {
-            cmp		byte ptr[bx], 0
-            jz		atoi_1
-
-            ; 	A = 10 * A
-            mov		cx,10
-            mul		cx
-
-            ; 	A = A + *S
-            mov		ch,0
-            mov		cl,[bx]
-            add		ax,cx
-
-            ; 	A = A - '0'
-            sub		ax,'0'
-
-            ; 	++S
-            inc		bx
-            
-            ;}
-            jmp		atoi_2
-
-    atoi_1:
-            ; return
-            ret
-
-    atoi	endp
-
-;######### FIM DO TRECHO DE CÓDIGO NÃO-AUTORAL #################################################
+;######### FIM DO TRECHO DE CODIGO NAO-AUTORAL #################################################
 
 end

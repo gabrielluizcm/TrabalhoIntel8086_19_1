@@ -1,9 +1,12 @@
 # Trabalho Intel 8086 - ARQ 1 19/1
 Trabalho do Intel 8086 da cadeira de ARQ 1 - 19/1 contendo a implementação em ASM do programa solicitado na especificação disponível em **(../Especificacao.pdf)**.
 
-Resumidamente, o programa consiste em exibir na tela o conteúdo de um arquivo de texto digitando periodicamente caractere a caractere, sendo que a periodicidade é definida dentro do próprio arquivo em tags na forma **#xx**, onde **xx** é um número decimal entre **01 e 99** ticks.
+Resumidamente, o programa consiste em exibir na tela o conteúdo de um arquivo de texto digitando periodicamente caractere a caractere, sendo que a periodicidade é definida dentro do próprio arquivo em tags na forma **#xx**, onde **xx** é um número decimal entre **01 e 99** ticks. É possível também que haja uma tag após a outra, por exemplo **#10#15**, o que é tratado normalmente durante a execução.
 
 ![Gif do programa sendo executado](Imagens/execucao.gif)
+
+## Utilização
+O programa foi desenvolvido em linguagem Assembly para o montador MASM do DOS rodando em Intel 8086. Para montagem e execução, foi utilizado o simulador [DOSBox](https://www.dosbox.com/) na versão 0.74-2. O executável **MAIN.EXE** em **(../MAIN.EXE)** deve ser colocado no drive virtual do DOSBox e chamado normalmente pela linha de comando.
 
 ## Funções Prontas
 As funções prontas usadas no programa disponíveis em **(../FuncoesBasicas/*)** foram cedidas pelo professor e desempenham:
